@@ -1087,27 +1087,47 @@ async function signOutUser() {
       await window.firebaseSignOut(window.firebaseAuth);
     }
   } catch(e) {}
+  showLoginScreen();
+  showToast('👋 Déconnecté avec succès', 'success');
+}
+
+function changeAccount() {
+  document.getElementById('userMenu').style.display = 'none';
+  // Déconnecter Firebase complètement
+  if (window.firebaseAuth && window.firebaseSignOut) {
+    window.firebaseSignOut(window.firebaseAuth).then(() => {
+      showLoginScreen();
+    });
+  } else {
+    showLoginScreen();
+  }
+}
+
+function showLoginScreen() {
   userData = { name: 'Invité', avatar: null, email: null };
   stepsCount = 0; motionSteps = 0; conversationHistory = [];
   if (sensorActive) stopMotionSensor();
   updateStepsUI();
+  // Vider les champs email/password
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authError').textContent = '';
+  // Réinitialiser le mode connexion
+  isSignUpMode = false;
+  document.getElementById('authSubmitBtn').textContent = 'Se connecter';
+  document.getElementById('authToggle').textContent = 'Pas encore de compte ? Créer un compte';
+  // Afficher écran de bienvenue
   document.getElementById('mainApp').classList.remove('visible');
   document.getElementById('welcomeScreen').classList.remove('hidden');
   document.getElementById('permissionScreen').classList.add('hidden');
-  document.getElementById('authEmail') && (document.getElementById('authEmail').value = '');
-  document.getElementById('authPassword') && (document.getElementById('authPassword').value = '');
-  document.getElementById('authError') && (document.getElementById('authError').textContent = '');
+  // Réinitialiser les messages
   document.getElementById('messages').innerHTML = `
     <div class="msg ai"><div class="msg-av">🌿</div><div>
     <div class="msg-bubble">Bonjour ! 👋 Je suis <strong>VitaCoach</strong>.<br><br>
     J'analyse vos pas en temps réel et vous donne des conseils personnalisés.<br><br>
     <em style="color:var(--muted);font-size:.8rem">Que puis-je faire pour vous aujourd'hui ?</em></div>
     <div class="msg-time">Maintenant</div></div></div>`;
-  showToast('👋 Déconnecté avec succès', 'success');
-}
-
-function changeAccount() {
-  signOutUser();
+  showToast('🔄 Connectez-vous avec un autre compte', '');
 }
 
 function saveUserLocally() {
