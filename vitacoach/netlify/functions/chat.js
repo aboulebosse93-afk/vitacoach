@@ -3,54 +3,46 @@ exports.handler = async function(event, context) {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Clé API manquante' }) };
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_API_KEY) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'Clé API Groq manquante' }) };
   }
 
   try {
     const body = JSON.parse(event.body);
 
-    const contents = [];
-    for (const msg of body.messages) {
-      contents.push({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      });
-    }
+    const messages = [
+      { role: 'system', content: body.system },
+      ...body.messages
+    ];
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: body.system }]
-          },
-          contents: contents,
-          generationConfig: {
-            maxOutputTokens: 1000,
-            temperature: 0.7
-          }
-        })
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: messages,
+        max_tokens: 1000,
+        temperature: 0.7
+      })
+    });
 
     const data = await response.json();
 
-    // Retourner la réponse complète de Gemini pour déboguer
-    if (!data.candidates || !data.candidates[0]) {
+    if (!data.choices || !data.choices[0]) {
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({
-          content: [{ type: 'text', text: 'ERREUR GEMINI: ' + JSON.stringify(data) }]
+          content: [{ type: 'text', text: 'ERREUR GROQ: ' + JSON.stringify(data) }]
         })
       };
     }
 
-    const text = data.candidates[0].content.parts[0].text;
+    const text = data.choices[0].message.content;
 
     return {
       statusCode: 200,
