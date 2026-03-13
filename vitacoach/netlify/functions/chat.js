@@ -11,7 +11,6 @@ exports.handler = async function(event, context) {
   try {
     const body = JSON.parse(event.body);
 
-    // Construire l'historique pour Gemini
     const contents = [];
     for (const msg of body.messages) {
       contents.push({
@@ -39,7 +38,19 @@ exports.handler = async function(event, context) {
     );
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu répondre.";
+
+    // Retourner la réponse complète de Gemini pour déboguer
+    if (!data.candidates || !data.candidates[0]) {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({
+          content: [{ type: 'text', text: 'ERREUR GEMINI: ' + JSON.stringify(data) }]
+        })
+      };
+    }
+
+    const text = data.candidates[0].content.parts[0].text;
 
     return {
       statusCode: 200,
@@ -55,8 +66,11 @@ exports.handler = async function(event, context) {
 
   } catch (error) {
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Erreur serveur: ' + error.message })
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({
+        content: [{ type: 'text', text: 'ERREUR: ' + error.message }]
+      })
     };
   }
 };
