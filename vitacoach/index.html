@@ -5,7 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>VitaCoach — Assistant Santé IA</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleSignIn()"></script>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAxgejP8Yipbc3XQKhuHxXZiUXANtNGo8o",
+    authDomain: "vitacoach-50364.firebaseapp.com",
+    projectId: "vitacoach-50364",
+    storageBucket: "vitacoach-50364.firebasestorage.app",
+    messagingSenderId: "173896460654",
+    appId: "1:173896460654:web:15cd5e11aef35808f0397f"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+
+  // Exposer les fonctions Firebase globalement
+  window.firebaseAuth = auth;
+  window.firebaseSignInWithPopup = signInWithPopup;
+  window.firebaseGoogleProvider = googleProvider;
+  window.firebaseSignInWithEmail = signInWithEmailAndPassword;
+  window.firebaseCreateUser = createUserWithEmailAndPassword;
+  window.firebaseSignOut = signOut;
+
+  // Surveiller l'état de connexion
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.userData = {
+        name: user.displayName || user.email.split('@')[0],
+        email: user.email,
+        avatar: user.photoURL
+      };
+      // Auto-login si déjà connecté
+      if (document.getElementById('welcomeScreen') && !document.getElementById('welcomeScreen').classList.contains('hidden')) {
+        window.proceedAfterLogin && window.proceedAfterLogin();
+      }
+    }
+  });
+
+  window.firebaseReady = true;
+</script>
 <style>
 :root {
   --bg: #080e0a;
@@ -93,6 +135,25 @@ body {
 
 .or-divider { display:flex; align-items:center; gap:12px; width:100%; max-width:320px; color:var(--muted); font-size:.8rem; }
 .or-line { flex:1; height:1px; background:var(--border); }
+
+/* Email form */
+.email-form { display:flex; flex-direction:column; gap:10px; width:100%; max-width:320px; }
+.email-input {
+  background:var(--surf); border:1px solid var(--border); color:var(--text);
+  border-radius:12px; padding:13px 16px; font-family:'DM Sans',sans-serif; font-size:.9rem;
+  outline:none; transition:border-color .2s; width:100%;
+}
+.email-input:focus { border-color:var(--accent); }
+.email-input::placeholder { color:var(--muted); }
+.email-submit {
+  background:var(--accent); color:#080e0a; border:none; border-radius:12px;
+  padding:13px; font-family:'Syne',sans-serif; font-weight:700; font-size:.95rem;
+  cursor:pointer; transition:opacity .2s; width:100%;
+}
+.email-submit:hover { opacity:.88; }
+.auth-toggle { font-size:.8rem; color:var(--muted); cursor:pointer; text-decoration:underline; }
+.auth-toggle:hover { color:var(--accent); }
+.auth-error { font-size:.78rem; color:var(--red); text-align:center; min-height:16px; }
 
 .skip-btn {
   background:transparent; border:1px solid var(--border);
@@ -416,7 +477,18 @@ main {
     <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
     Continuer avec Google
   </button>
-  <div id="googleBtnContainer" style="display:none"></div>
+
+  <div class="or-divider"><div class="or-line"></div>ou par email<div class="or-line"></div></div>
+
+  <div class="email-form">
+    <input type="email" class="email-input" id="authEmail" placeholder="Votre adresse email">
+    <input type="password" class="email-input" id="authPassword" placeholder="Mot de passe" onkeydown="if(event.key==='Enter')submitEmailAuth()">
+    <div class="auth-error" id="authError"></div>
+    <button class="email-submit" onclick="submitEmailAuth()" id="authSubmitBtn">Se connecter</button>
+    <div style="text-align:center">
+      <span class="auth-toggle" id="authToggle" onclick="toggleAuthMode()">Pas encore de compte ? Créer un compte</span>
+    </div>
+  </div>
 
   <div class="or-divider"><div class="or-line"></div>ou<div class="or-line"></div></div>
   <button class="skip-btn" onclick="skipLogin()">Continuer sans compte</button>
@@ -586,65 +658,81 @@ let stepThreshold = 12;
 let userData = { name: 'Invité', avatar: null, email: null };
 let isManualMode = true;
 
-// ── GOOGLE SIGN-IN ──
+// ── FIREBASE AUTH ──
 const GOOGLE_CLIENT_ID = '803094214620-u0bh9ccok1d9vaurjlkmjq6i7bahk41d.apps.googleusercontent.com';
 const APP_DOMAIN = 'https://vitacoach.netlify.app';
+let isSignUpMode = false;
 
-function initGoogleSignIn() {
-  if (typeof google === 'undefined') return;
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleGoogleResponse,
-    auto_select: false,
-    cancel_on_tap_outside: true,
-    ux_mode: 'popup'
-  });
+function toggleAuthMode() {
+  isSignUpMode = !isSignUpMode;
+  document.getElementById('authSubmitBtn').textContent = isSignUpMode ? 'Créer mon compte' : 'Se connecter';
+  document.getElementById('authToggle').textContent = isSignUpMode ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte';
+  document.getElementById('authError').textContent = '';
 }
 
-function signInWithGoogle() {
-  if (typeof google === 'undefined') {
-    showToast('⚠️ Chargement Google en cours, réessayez...', 'error');
-    setTimeout(() => initGoogleSignIn(), 1000);
+async function submitEmailAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errorEl = document.getElementById('authError');
+  errorEl.textContent = '';
+
+  if (!email || !password) {
+    errorEl.textContent = 'Veuillez remplir tous les champs';
+    return;
+  }
+  if (password.length < 6) {
+    errorEl.textContent = 'Mot de passe : minimum 6 caractères';
     return;
   }
 
-  // Render a hidden button and click it to trigger popup
-  const container = document.getElementById('googleBtnContainer');
-  container.innerHTML = '';
-  google.accounts.id.renderButton(container, {
-    type: 'standard',
-    theme: 'outline',
-    size: 'large',
-    text: 'signin_with',
-    locale: 'fr'
-  });
-  // Click the rendered button
-  setTimeout(() => {
-    const btn = container.querySelector('div[role=button]') || container.querySelector('iframe');
-    if (btn) btn.click();
-    else {
-      // Fallback: One Tap prompt
-      google.accounts.id.prompt((n) => {
-        if (n.isNotDisplayed() || n.isSkippedMoment()) {
-          showToast('⚠️ Ajoutez votre domaine dans Google Cloud Console → Origines autorisées', 'error');
-        }
-      });
-    }
-  }, 300);
-}
+  const btn = document.getElementById('authSubmitBtn');
+  btn.textContent = '⏳ Chargement...';
+  btn.disabled = true;
 
-function handleGoogleResponse(response) {
   try {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    userData.name = payload.given_name || payload.name || 'Utilisateur';
-    userData.email = payload.email;
-    userData.avatar = payload.picture;
-    saveUserLocally();
+    let result;
+    if (isSignUpMode) {
+      result = await window.firebaseCreateUser(window.firebaseAuth, email, password);
+    } else {
+      result = await window.firebaseSignInWithEmail(window.firebaseAuth, email, password);
+    }
+    const user = result.user;
+    userData.name = user.displayName || email.split('@')[0];
+    userData.email = user.email;
+    userData.avatar = user.photoURL;
     proceedAfterLogin();
   } catch(e) {
-    skipLogin();
+    let msg = 'Erreur de connexion';
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Email ou mot de passe incorrect';
+    else if (e.code === 'auth/email-already-in-use') msg = 'Cet email est déjà utilisé';
+    else if (e.code === 'auth/invalid-email') msg = 'Email invalide';
+    else if (e.code === 'auth/weak-password') msg = 'Mot de passe trop faible';
+    errorEl.textContent = msg;
+    btn.textContent = isSignUpMode ? 'Créer mon compte' : 'Se connecter';
+    btn.disabled = false;
   }
 }
+
+async function signInWithGoogle() {
+  try {
+    if (!window.firebaseAuth) {
+      showToast('⚠️ Firebase en cours de chargement...', 'error');
+      return;
+    }
+    const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseGoogleProvider);
+    const user = result.user;
+    userData.name = user.displayName || user.email.split('@')[0];
+    userData.email = user.email;
+    userData.avatar = user.photoURL;
+    proceedAfterLogin();
+  } catch(e) {
+    if (e.code !== 'auth/popup-closed-by-user') {
+      showToast('⚠️ Erreur Google : ' + e.message, 'error');
+    }
+  }
+}
+
+function initGoogleSignIn() {}
 
 function skipLogin() {
   userData = { name: 'Invité', avatar: null, email: null };
