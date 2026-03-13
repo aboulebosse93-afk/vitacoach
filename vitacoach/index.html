@@ -208,7 +208,7 @@ header {
   padding:16px 24px; display:flex; align-items:center; justify-content:space-between;
   border-bottom:1px solid var(--border);
   background:rgba(8,14,10,.85); backdrop-filter:blur(14px);
-  position:sticky; top:0; z-index:10;
+  position:sticky; top:0; z-index:10; position:relative;
 }
 .logo { display:flex; align-items:center; gap:10px; }
 .logo-icon {
@@ -543,6 +543,34 @@ main {
       <div class="user-pill" id="userPill" onclick="toggleUserMenu()">
         <div class="user-avatar" id="userAvatar">?</div>
         <span id="userName">Invité</span>
+        <span style="font-size:.7rem;color:var(--muted)">▾</span>
+      </div>
+
+      <!-- Menu utilisateur -->
+      <div id="userMenu" style="
+        display:none; position:absolute; top:64px; right:20px; z-index:50;
+        background:var(--card); border:1px solid var(--border); border-radius:14px;
+        padding:8px; min-width:200px; box-shadow:0 8px 30px rgba(0,0,0,.5);
+      ">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:6px">
+          <div style="font-size:.75rem;color:var(--muted)">Connecté en tant que</div>
+          <div style="font-size:.88rem;font-weight:600;margin-top:2px" id="menuUserName">Invité</div>
+          <div style="font-size:.75rem;color:var(--muted)" id="menuUserEmail"></div>
+        </div>
+        <button onclick="changeAccount()" style="
+          width:100%;text-align:left;background:transparent;border:none;color:var(--text);
+          padding:9px 12px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;
+          font-size:.85rem;display:flex;align-items:center;gap:8px;transition:background .2s;
+        " onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background='transparent'">
+          🔄 Changer de compte
+        </button>
+        <button onclick="signOutUser()" style="
+          width:100%;text-align:left;background:transparent;border:none;color:var(--red);
+          padding:9px 12px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;
+          font-size:.85rem;display:flex;align-items:center;gap:8px;transition:background .2s;
+        " onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background='transparent'">
+          🚪 Se déconnecter
+        </button>
       </div>
     </div>
   </header>
@@ -1030,6 +1058,52 @@ function showToast(msg, type='') {
   document.getElementById('toastMsg').textContent = msg;
   t.className = `toast ${type} show`;
   setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+function toggleUserMenu() {
+  const menu = document.getElementById('userMenu');
+  const isVisible = menu.style.display === 'block';
+  menu.style.display = isVisible ? 'none' : 'block';
+  document.getElementById('menuUserName').textContent = userData.name || 'Invité';
+  document.getElementById('menuUserEmail').textContent = userData.email || '';
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('userMenu');
+  const pill = document.getElementById('userPill');
+  if (menu && pill && !pill.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+async function signOutUser() {
+  document.getElementById('userMenu').style.display = 'none';
+  try {
+    if (window.firebaseAuth && window.firebaseSignOut) {
+      await window.firebaseSignOut(window.firebaseAuth);
+    }
+  } catch(e) {}
+  userData = { name: 'Invité', avatar: null, email: null };
+  stepsCount = 0; motionSteps = 0; conversationHistory = [];
+  if (sensorActive) stopMotionSensor();
+  updateStepsUI();
+  document.getElementById('mainApp').classList.remove('visible');
+  document.getElementById('welcomeScreen').classList.remove('hidden');
+  document.getElementById('permissionScreen').classList.add('hidden');
+  document.getElementById('authEmail') && (document.getElementById('authEmail').value = '');
+  document.getElementById('authPassword') && (document.getElementById('authPassword').value = '');
+  document.getElementById('authError') && (document.getElementById('authError').textContent = '');
+  document.getElementById('messages').innerHTML = `
+    <div class="msg ai"><div class="msg-av">🌿</div><div>
+    <div class="msg-bubble">Bonjour ! 👋 Je suis <strong>VitaCoach</strong>.<br><br>
+    J'analyse vos pas en temps réel et vous donne des conseils personnalisés.<br><br>
+    <em style="color:var(--muted);font-size:.8rem">Que puis-je faire pour vous aujourd'hui ?</em></div>
+    <div class="msg-time">Maintenant</div></div></div>`;
+  showToast('👋 Déconnecté avec succès', 'success');
+}
+
+function changeAccount() {
+  signOutUser();
 }
 
 function saveUserLocally() {
